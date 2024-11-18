@@ -1,0 +1,9 @@
+.h -
+defines the literal type (int,float,string)
+literal entry that stores details like value, type, and address
+defines a table for literals, in the form of an array, holding info like size and next address open for a literal
+
+.c -
+defines the initialization function that makes a table of size 0 that starts at the first address
+has a function to add a literal, with error handling for full size and a lookup if found
+also has a print literal table function
