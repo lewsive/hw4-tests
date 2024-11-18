@@ -15,7 +15,7 @@ code_seq genLiteralExpression(int literal);
 code_seq genIdentifierExpression(id_use *id);
 
 // Function to generate code for binary operations (e.g., +, -, *, /)
-code_seq genBinaryOperation(InstructionType op, id_use *left, id_use *right);
+code_seq genBinaryOperation(instr_type op, id_use *left, id_use *right);
 
 // Function to generate code for assignment (e.g., a = b)
 code_seq genAssignment(id_use *left, id_use *right);

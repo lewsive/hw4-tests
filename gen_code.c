@@ -1,87 +1,122 @@
 #include "gen_code.h"
-#include "AST.h"
-#include "lexer.h"
+#include "bof.h"
+#include "ast.h"
+#include "instruction.h"
+#include "vm/assemble.h"
 
-// Function to generate code for a literal expression (constant)
-code_seq genLiteralExpression(int literal) {
-    code_seq seq;
-    initcode_seq(&seq);
-
-    // Generate code to load literal value into a register
-    addInstruction(&seq, LWR, literal, 0, 0); // LOAD literal into a register
-    return seq;
+void gen_code_initialize() {
+    // Initialize any needed state
 }
 
-// Function to generate code for an identifier (variable or constant)
-code_seq genIdentifierExpression(id_use *id) {
-    code_seq seq;
-    initcode_seq(&seq);
+void gen_code_program(BOFFILE bf, block_t prog) {
+    // Generate code for declarations
+    gen_code_declaration(bf, prog.const_decls);
+    gen_code_declaration(bf, prog.var_decls);
+    gen_code_declaration(bf, prog.proc_decls);
+    
+    // Generate code for statements
+    gen_code_statements(bf, prog.stmts);
+}
 
-    // Check the type of the identifier and generate code accordingly
-    if (id->attrs->type == INT) {
-        addInstruction(&seq, LOAD, id->attrs->address, 0, 0); // LOAD integer into register
+// Generate code for a single declaration
+static void gen_code_declaration(BOFFILE bf, declaration_t dec) {
+    // Handle variable declarations
+    // Allocate space and initialize variables
+    bof_write_declare(bf, dec.name, dec.type);
+}
+
+// Generate code for a single statement
+static void gen_code_statement(BOFFILE bf, stmt_t stmt) {
+    switch (stmt.stmt_kind) {
+        case ASSIGN_STMT:
+            gen_code_assignment(bf, stmt.data.assign_stmt);
+            break;
+        case IF_STMT:
+            gen_code_if(bf, stmt.data.if_stmt);
+            break;
+        case WHILE_STMT:
+            gen_code_while(bf, stmt.data.while_stmt);
+            break;
+        // Add other statement types as needed
     }
-    // Add more types if necessary (e.g., float, string)
-    return seq;
 }
 
-// Function to generate code for binary operations (e.g., +, -, *, /)
-code_seq genBinaryOperation(InstructionType op, id_use *left, id_use *right) {
-    code_seq seq;
-    initcode_seq(&seq);
+// Helper functions for specific statement types
+static void gen_code_assignment(BOFFILE bf, assign_stmt_t stmt) {
+    // Generate code for expression evaluation
+    gen_code_expression(bf, stmt.expr);
+    // Store result in variable
+    bof_write_store(bf, stmt.name);
+}
 
-    // Load the left operand into a register
-    addInstruction(&seq, LOAD, left->attrs->address, 0, 0);
+static void gen_code_if(BOFFILE bf, if_stmt_t stmt) {
+    // Generate condition code
+    gen_code_expression(bf, stmt.condition);
+    
+    // Generate branching logic
+    int label_else = bof_new_label(bf);
+    int label_end = bof_new_label(bf);
+    
+    bof_write_branch_zero(bf, label_else);
+    gen_code_statement(bf, stmt.then_stmts);
+    bof_write_branch(bf, label_end);
+    
+    bof_write_label(bf, label_else);
+    if (stmt.else_stmts != NULL) {
+        gen_code_statement(bf, stmt.else_stmts);
+    }
+    bof_write_label(bf, label_end);
+}
 
-    // Load the right operand into a register
-    addInstruction(&seq, LOAD, right->attrs->address, 0, 0);
+static void gen_code_while(BOFFILE bf, while_stmt_t stmt) {
+    int label_start = bof_new_label(bf);
+    int label_end = bof_new_label(bf);
+    
+    bof_write_label(bf, label_start);
+    gen_code_expression(bf, stmt.condition);
+    bof_write_branch_zero(bf, label_end);
+    
+    gen_code_statement(bf, stmt.body);
+    bof_write_branch(bf, label_start);
+    
+    bof_write_label(bf, label_end);
+}
 
-    // Perform the binary operation (e.g., ADD, SUB)
-    switch (op) {
-        case ADD:
-            addInstruction(&seq, ADD, left->attrs->address, right->attrs->address, 0);
+static void gen_code_expression(BOFFILE bf, expr_t expr) {
+    // Generate code for expression evaluation
+    // Handle different expression types (binary ops, literals, variables)
+    switch (expr.expr_kind) {
+        case BINARY_OP:
+            gen_code_binary_op(bf, expr.data.binary);
             break;
-        case SUB:
-            addInstruction(&seq, SUB, left->attrs->address, right->attrs->address, 0);
+        case ID_EXPR:
+            bof_write_load(bf, expr.data.id);
             break;
-        case MUL:
-            addInstruction(&seq, MUL, left->attrs->address, right->attrs->address, 0);
+        case NUM_EXPR:
+            bof_write_int_const(bf, expr.data.num);
+            break;
+    }
+}
+
+static void gen_code_binary_op(BOFFILE bf, binary_op_expr_t op) {
+    // Generate code for left and right operands
+    gen_code_expression(bf, op.left);
+    gen_code_expression(bf, op.right);
+    
+    // Generate appropriate operation code
+    switch (op.operator) {
+        case PLUS:
+            bof_write_add(bf);
+            break;
+        case MINUS:
+            bof_write_sub(bf);
+            break;
+        case TIMES:
+            bof_write_mul(bf);
             break;
         case DIV:
-            addInstruction(&seq, DIV, left->attrs->address, right->attrs->address, 0);
+            bof_write_div(bf);
             break;
-        default:
-            // Handle other operations if necessary
-            break;
+        // Add other operators as needed
     }
-    return seq;
-}
-
-// Function to generate code for assignment (e.g., a = b)
-code_seq genAssignment(id_use *left, id_use *right) {
-    code_seq seq;
-    initcode_seq(&seq);
-
-    // Load the value of the right operand into a register
-    addInstruction(&seq, LOAD, right->attrs->address, 0, 0);
-
-    // Store the value into the left operand (variable)
-    addInstruction(&seq, STORE, left->attrs->address, 0, 0);
-
-    return seq;
-}
-
-// Function to generate code for a function call
-code_seq genFunctionCall(id_use *func) {
-    code_seq seq;
-    initcode_seq(&seq);
-
-    // Prepare arguments for the function call (if any)
-    // This could involve loading arguments into registers
-    // For example: addInstruction(&seq, LOAD, arg_address, 0, 0);
-
-    // Call the function
-    addInstruction(&seq, CALL, func->attrs->address, 0, 0); // Call the function at func->address
-
-    return seq;
 }
