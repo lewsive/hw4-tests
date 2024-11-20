@@ -4,6 +4,7 @@
 #include "code_seq.h"
 #include "string.h"
 #include "math.h"
+#include "utilities.h"
 
 #define STACK_SPACE 4096
 
