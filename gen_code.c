@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "code_seq.h"
 #include "string.h"
+#include "math.h"
 
 #define STACK_SPACE 4096
 
