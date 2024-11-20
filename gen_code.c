@@ -2,6 +2,7 @@
 #include "bof.h"
 #include "ast.h"
 #include "code_seq.h"
+#include "string.h"
 
 #define STACK_SPACE 4096
 
