@@ -18,13 +18,6 @@
 // but part of the homework is to write that gen_code module,
 // so they are declared below to make this file self-contained.
 
-// Initialize the code generator
-extern void gen_code_initialize();
-
-// Requires: bf is open for writing
-// Generate code for prog into bf
-extern void gen_code_program(BOFFILE bf, block_t prog);
-
 /* Print a usage message on stderr 
    and exit with failure. */
 static void usage(const char *cmdname)
