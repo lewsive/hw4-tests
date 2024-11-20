@@ -1,36 +1,46 @@
-#ifndef LITERAL_TABLE_H
-#define LITERAL_TABLE_H
+#ifndef _LITERAL_TABLE_H
+#define _LITERAL_TABLE_H
+#include <stdbool.h>
+#include "machine_types.h"
 
-// Define the literal types
-typedef enum {
-    INT,
-    FLOAT,
-    STRING
-} LiteralType;
+// Return the size (in words/entries) in the literal table
+extern unsigned int literal_table_size();
 
-// Literal entry structure to store details about each literal
-typedef struct {
-    void *value;          // Pointer to the value (generic for int, float, etc.)
-    LiteralType type;     // Type of the literal (INT, FLOAT, STRING)
-    int address;          // Memory address or offset for this literal
-} LiteralEntry;
+// is the literal_table empty?
+extern bool literal_table_empty();
 
-// Literal table structure to manage a collection of literals
-typedef struct {
-    LiteralEntry entries[100];  // Array to store the literal entries (max 100 literals)
-    int size;                   // Current number of entries in the table
-    int next_address;           // Next available memory address for a literal
-} LiteralTable;
+// is the literal_table full?
+extern bool literal_table_full();
 
-// Function declarations
+// initialize the literal_table
+extern void literal_table_initialize();
 
-// Initialize the literal table
-void initLiteralTable(LiteralTable *table);
+// Return the offset of sought if it is in the table,
+// otherwise return -1.
+extern int literal_table_find_offset(const char *sought, word_type value);
 
-// Add a literal to the table and return its memory address
-int addLiteral(LiteralTable *table, void *value, LiteralType type);
+// Return true just when sought is in the table
+extern bool literal_table_present(const char *sought, word_type value);
 
-// Print the contents of the literal table
-void printLiteralTable(LiteralTable *table);
+// Return the word offset for val_string/value
+// entering it in the table if it's not already present
+extern unsigned int literal_table_lookup(const char *val_string,
+										 word_type value);
 
-#endif // LITERAL_TABLE_H
+// === iteration helpers ===
+
+// Start an iteration over the literal table
+// which can extract the elements
+extern void literal_table_start_iteration();
+
+// End the current iteration over the literal table.
+extern void literal_table_end_iteration();
+
+// Is there another float in the literal table?
+extern bool literal_table_iteration_has_next();
+
+// Return the next word_type in the literal table
+// and advance the iteration
+extern word_type literal_table_iteration_next();
+
+#endif

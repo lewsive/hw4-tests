@@ -22,7 +22,7 @@ unsigned int ast_line(AST t) {
 
 // Return the type tag of the AST t
 AST_type ast_type_tag(AST t) {
-    return t.generic.type_tag;
+    return t.generic.type_tag; 
 }
 
 // Return an AST for a program,

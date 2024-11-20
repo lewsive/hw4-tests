@@ -1,52 +1,168 @@
-#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include "literal_table.h"
+#include "utilities.h"
 
-// Initialize the literal table
-void initLiteralTable(LiteralTable *table) {
-    table->size = 0;
-    table->next_address = 0x1000;  // Starting memory address for literals
+// constant table entries
+typedef struct literal_table_entry_s
+{
+    struct literal_table_entry_s *next;
+    const char *text;
+    word_type value;
+    unsigned int offset;
+} literal_table_entry_t;
+
+// the table of constants is a linked list of literal_table_entry_t's
+// with first pointing to the first entry and last to the last one
+static literal_table_entry_t *first;
+static literal_table_entry_t *last;
+static unsigned int next_word_offset;
+
+// Iteration state follows
+static bool iterating;
+static literal_table_entry_t *iteration_next;
+
+// Check the invariant
+static void literal_table_okay()
+{
+    bool emp = literal_table_empty();
+    assert(emp == (next_word_offset == 0));
+    assert(emp == (first == NULL));
+    assert(emp == (last == NULL));
 }
 
-// Function to add a literal to the table
-int addLiteral(LiteralTable *table, void *value, LiteralType type) {
-    // Check if the literal already exists in the table (to avoid duplicates)
-    for (int i = 0; i < table->size; ++i) {
-        // Check if the value and type match
-        if (table->entries[i].value == value && table->entries[i].type == type) {
-            return table->entries[i].address;  // Return the existing address if found
-        }
-    }
-
-    // Add new entry if there is space in the table
-    if (table->size < 100) {
-        table->entries[table->size].value = value;
-        table->entries[table->size].type = type;
-        table->entries[table->size].address = table->next_address;
-        table->next_address += 4;  // Assume each literal occupies 4 bytes (adjust as needed)
-        table->size++;
-        return table->entries[table->size - 1].address;
-    }
-
-    return -1;  // Return -1 if the table is full
+// Return the size (in words/entries) in the literal table
+unsigned int literal_table_size()
+{
+    return next_word_offset;
 }
 
-// Function to print the contents of the literal table
-void printLiteralTable(LiteralTable *table) {
-    printf("Literal Table:\n");
-    for (int i = 0; i < table->size; ++i) {
-        printf("Literal: ");
-        switch (table->entries[i].type) {
-            case INT:
-                printf("Int: %d", *(int *)table->entries[i].value);
-                break;
-            case FLOAT:
-                printf("Float: %.2f", *(float *)table->entries[i].value);
-                break;
-            case STRING:
-                printf("String: %s", (char *)table->entries[i].value);
-                break;
+// is the literal_table empty?
+bool literal_table_empty()
+{
+    return next_word_offset == 0;
+}
+
+// is the literal_table full?
+bool literal_table_full()
+{
+    return false;
+}
+
+// initialize the literal_table
+void literal_table_initialize()
+{
+    first = NULL;
+    last = NULL;
+    next_word_offset = 0;
+    literal_table_okay();
+    iterating = false;
+    iteration_next = NULL;
+    literal_table_okay();
+}
+
+// Requires: sought is the print form of value
+// return the offset of sought/value if it is in the table
+// otherwise return -1.
+int literal_table_find_offset(const char *sought, word_type value)
+{
+    literal_table_okay();
+    literal_table_entry_t *entry = first;
+    while (entry != NULL)
+    {
+        if (strcmp(entry->text, sought) == 0)
+        {
+            return entry->offset;
         }
-        printf(" Address: 0x%x\n", table->entries[i].address);
+        entry = entry->next;
     }
+    return -1;
+}
+
+// Requires: sought is the print form of value
+// Return true just when sought is in the table
+bool literal_table_present(const char *sought, word_type value)
+{
+    literal_table_okay();
+    return literal_table_find_offset(sought, value) >= 0;
+}
+
+// Return the word offset for val_string/value
+// entering it in the table if it's not already present
+unsigned int literal_table_lookup(const char *val_string,
+                                  word_type value)
+{
+    int ret = literal_table_find_offset(val_string, value);
+    if (ret >= 0)
+    {
+        // don't insert if it's already present
+        return ret;
+    }
+    // it's not already present, so insert it
+    literal_table_entry_t *new_entry = (literal_table_entry_t *)malloc(sizeof(literal_table_entry_t));
+    new_entry->text = val_string;
+    new_entry->value = value;
+    new_entry->next = NULL;
+    ret = next_word_offset;
+    new_entry->offset = next_word_offset++;
+    if (new_entry == NULL)
+    {
+        bail_with_error("No space to allocate new literal table entry!");
+    }
+    if (first == NULL)
+    {
+        first = new_entry;
+        last = new_entry;
+    }
+    else
+    {
+        last->next = new_entry;
+        last = new_entry;
+    }
+    literal_table_okay();
+    return ret;
+}
+
+// === iteration helpers ===
+
+// Start an iteration over the literal table
+// which can extract the elements
+void literal_table_start_iteration()
+{
+    if (iterating)
+    {
+        bail_with_error("Attempt to start literal_table iterating when already iterating!");
+    }
+    literal_table_okay();
+    iterating = true;
+    iteration_next = first;
+}
+
+// End the current iteration over the literal table.
+void literal_table_end_iteration()
+{
+    iterating = false;
+}
+
+// Is there another float in the literal table?
+bool literal_table_iteration_has_next()
+{
+    literal_table_okay();
+    bool ret = (iteration_next != NULL);
+    if (!ret)
+    {
+        iterating = false;
+    }
+    return ret;
+}
+
+// Return the next float in the literal table
+// and advance the iteration
+word_type literal_table_iteration_next()
+{
+    assert(iteration_next != NULL);
+    float ret = iteration_next->value;
+    iteration_next = iteration_next->next;
+    return ret;
 }

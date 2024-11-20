@@ -2,6 +2,7 @@
     "files.associations": {
         "*.ejs": "html",
         "any": "c",
-        "*.x": "c"
+        "*.x": "c",
+        "gen_code.c": "cpp"
     }
 }
