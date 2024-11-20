@@ -1,7 +1,15 @@
-#include "literal_table.h"
-#include "bof.h"
+#include "gen_code.h"
+
+#include <limits.h>
+#include <string.h>
+#include "spl.tab.h"
 #include "ast.h"
-#include "code_seq.h"
+#include "code.h"
+#include "id_use.h"
+#include "literal_table.h"
+#include "gen_code.h"
+#include "utilities.h"
+#include "regname.h"
 
 #define STACK_SPACE 4096
 
