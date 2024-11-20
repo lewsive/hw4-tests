@@ -26,7 +26,8 @@ static BOFHeader gen_code_program_header(code_seq main_cs)
 {
     BOFHeader ret;
     // magic
-    strncpy(ret.magic, "MAGIC", 4);
+    strncpy(ret.magic, "MAGIC", sizeof(ret.magic) - 1); // Copy up to the buffer size minus one
+    ret.magic[sizeof(ret.magic) - 1] = '\0';           // Ensure null termination
     // text start address
     ret.text_start_address = 0;
     // text length
