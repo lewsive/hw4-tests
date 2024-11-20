@@ -10,6 +10,8 @@
 #include "utilities.h"
 #include "symtab.h"
 #include "scope_check.h"
+#include "gen_code.h"
+#include "literal_table.h"
 
 // The functions gen_code_initialize and gen_code_program
 // would normally be declared in gen_code.h,
