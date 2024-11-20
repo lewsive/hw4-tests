@@ -13,7 +13,7 @@ void gen_code_initialize()
     literal_table_initialize();
 }
 
-static void gen_code_output_seq(BOFFILE bf, code_seq cs)
+void gen_code_output_seq(BOFFILE bf, code_seq cs)
 {
     while (!code_seq_is_empty(cs)) {
 	bin_instr_t inst = code_seq_first(cs)->instr;
@@ -22,7 +22,7 @@ static void gen_code_output_seq(BOFFILE bf, code_seq cs)
     }
 }
 
-static BOFHeader gen_code_program_header(code_seq main_cs)
+BOFHeader gen_code_program_header(code_seq main_cs)
 {
     BOFHeader ret;
     // magic
